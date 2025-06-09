@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About RETI | Robotic Electronics Training Institute</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="landing-page">
+    <div class="circuit-pattern"></div>
+    <div class="grid-overlay"></div>
+    
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <div class="logo-circuit">
+                    <div class="circuit-dot"></div>
+                    <div class="circuit-line horizontal"></div>
+                    <div class="circuit-line vertical"></div>
+                </div>
+                <span class="nav-brand">RETI</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="about.html" class="nav-link active">About</a></li>
+                <li><a href="#programs" class="nav-link">Programs</a></li>
+                <li><a href="#faculty" class="nav-link">Faculty</a></li>
+                <li><a href="#facilities" class="nav-link">Facilities</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            
+            <div class="login-section">
+                <button class="login-btn" onclick="window.location.href='/chat'">
+                    <span class="btn-background"></span>
+                    <span class="btn-border"></span>
+                    <span class="btn-text">
+                        <span class="btn-icon">⚡</span>
+                        PORTAL
+                        <span class="btn-arrow">→</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="landing-container">
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="main-title">
+                    <span class="title-text">ABOUT</span>
+                    <span class="title-text glow">RETI</span>
+                </h1>
+                <p class="hero-subtitle">
+                    <span class="secure-icon">🎯</span>
+                    SHAPING THE FUTURE OF ROBOTICS EDUCATION SINCE 2009
+                    <span class="secure-icon">🌟</span>
+                </p>
+            </div>
+        </section>
+
+        <section class="mission-section">
+            <div class="section-header">
+                <h2 class="section-title">Our Mission</h2>
+                <p class="section-subtitle">Empowering the next generation of robotics engineers and AI specialists</p>
+            </div>
+            <div class="mission-content">
+                <div class="mission-card">
+                    <div class="mission-icon">🎯</div>
+                    <h3>Excellence in Education</h3>
+                    <p>We are committed to providing world-class education in robotics, artificial intelligence, and automation technologies through innovative curriculum and hands-on learning experiences.</p>
+                </div>
+                <div class="mission-card">
+                    <div class="mission-icon">🌍</div>
+                    <h3>Global Impact</h3>
+                    <p>Our graduates contribute to solving real-world challenges in healthcare, manufacturing, space exploration, and sustainable technology across the globe.</p>
+                </div>
+                <div class="mission-card">
+                    <div class="mission-icon">🚀</div>
+                    <h3>Innovation Leadership</h3>
+                    <p>We foster a culture of innovation, encouraging students and faculty to push the boundaries of what's possible in robotics and AI technology.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="landing-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#programs">All Programs</a></li>
+                        <li><a href="#admissions">Admissions</a></li>
+                        <li><a href="#scholarships">Scholarships</a></li>
+                        <li><a href="#careers">Career Services</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="tech-specs">
+                    <span>RETI © 2024</span>
+                    <span>•</span>
+                    <span>ACCREDITED BY AICTE</span>
+                    <span>•</span>
+                    <span>ISO 9001:2015 CERTIFIED</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <canvas id="particleCanvas"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const particles = [];
+        const maxParticles = 30;
+        
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.life = Math.random() * 100;
+                this.decay = Math.random() * 0.5 + 0.5;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                
+                if (this.life <= 0) {
+                    this.life = 100;
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                }
+            }
+            
+            draw() {
+                const alpha = Math.max(0, this.life / 100);
+                ctx.save();
+                ctx.globalAlpha = alpha * 0.6;
+                ctx.fillStyle = '#00ff88';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ff88';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        for (let i = 0; i < maxParticles; i++) {
+            particles.push(new Particle());
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

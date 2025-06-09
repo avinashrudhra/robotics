@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robotic Chat - Secure Communication</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="chat-page">
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-info">
+                <div class="user-avatar">
+                    <img id="chatPartnerPicture" class="header-profile-picture" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlMGUwZTAiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIxNiIgcj0iNiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMTAgMzBjMC01LjUyMyA0LjQ3Ny0xMCAxMC0xMHMxMCA0LjQ3NyAxMCAxMCIgZmlsbD0iIzk5OTk5OSIvPgo8L3N2Zz4K" alt="Chat Partner">
+                </div>
+                <div class="header-details">
+                    <h2 class="chat-title">Robotic Chat</h2>
+                    <div class="user-status" id="userStatus">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <!-- Theme Toggle -->
+                <button class="action-btn" id="themeToggle" title="Toggle Dark Mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                
+                <!-- Disappearing Messages Toggle -->
+                <button class="action-btn" id="disappearingToggle" title="Toggle Disappearing Messages">
+                    <span class="disappearing-icon">⏰</span>
+                </button>
+                
+                <!-- Clear Chat -->
+                <button class="action-btn" id="clearChatBtn" title="Clear Chat">
+                    <span class="clear-icon">🗑️</span>
+                </button>
+                
+                <!-- Settings -->
+                <button class="action-btn" id="settingsBtn" title="Settings">
+                    <span class="settings-icon">⚙️</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+            <div class="typing-content">
+                <span class="typing-text">User is typing</span>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Messages Container -->
+        <div class="messages-container" id="messagesContainer">
+            <div class="chat-background"></div>
+            <div class="messages-list" id="messagesList">
+                <!-- Welcome Message -->
+                <div class="system-message">
+                    <span>🔒 End-to-end encrypted chat</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Message Input Area -->
+        <div class="message-input-container">
+            <div class="input-actions">
+                <!-- Attachment Button -->
+                <button class="input-btn" id="attachBtn" title="Attach File">
+                    📎
+                </button>
+                
+                <!-- Photo Button -->
+                <button class="input-btn" id="photoBtn" title="Send Photo">
+                    📷
+                </button>
+                
+                <!-- Voice Button -->
+                <button class="input-btn voice-btn" id="voiceBtn" title="Record Voice Message">
+                    🎤
+                </button>
+            </div>
+            
+            <div class="message-input-wrapper">
+                <input type="text" 
+                       id="messageInput" 
+                       class="message-input" 
+                       placeholder="Type a message..."
+                       autocomplete="off">
+                
+                <button class="emoji-btn" id="emojiBtn" title="Emoji">
+                    😊
+                </button>
+            </div>
+            
+            <button class="send-btn" id="sendBtn" title="Send Message">
+                <span class="send-icon">➤</span>
+            </button>
+            
+            <!-- Quick Logout Button -->
+            <button class="input-btn logout-quick-btn" id="logoutQuickBtn" title="Logout">
+                🚪
+            </button>
+            
+            <!-- Hidden File Input -->
+            <input type="file" 
+                   id="fileInput" 
+                   accept="image/*" 
+                   style="display: none;">
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    
+    <!-- Image Preview Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-backdrop" id="imageModalBackdrop"></div>
+        <div class="modal-content image-modal-content">
+            <button class="modal-close" id="imageModalClose">×</button>
+            <img id="modalImage" src="" alt="Image Preview">
+            <div class="image-modal-actions">
+                <button class="modal-btn" id="downloadImageBtn">Download</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-backdrop" id="settingsModalBackdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="settingsModalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <h4>Disappearing Messages</h4>
+                    <div class="disappearing-options">
+                        <label>
+                            <input type="radio" name="disappearTime" value="0" checked>
+                            <span>Off</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="5">
+                            <span>5 seconds</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="30">
+                            <span>30 seconds</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="60">
+                            <span>1 minute</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Chat Background</h4>
+                    <div class="background-options">
+                        <button class="bg-option" data-bg="default">Default</button>
+                        <button class="bg-option" data-bg="dark">Dark</button>
+                        <button class="bg-option" data-bg="blue">Blue</button>
+                        <button class="bg-option" data-bg="green">Green</button>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>User Profile</h4>
+                    <div class="profile-info">
+                        <div class="profile-section">
+                            <div class="profile-picture-container">
+                                <img id="currentUserPicture" class="profile-picture" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlMGUwZTAiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIxNiIgcj0iNiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMTAgMzBjMC01LjUyMyA0LjQ3Ny0xMCAxMC0xMHMxMCA0LjQ3NyAxMCAxMCIgZmlsbD0iIzk5OTk5OSIvPgo8L3N2Zz4K" alt="Profile Picture">
+                                <button class="change-picture-btn" id="changePictureBtn">📷</button>
+                                <input type="file" id="profilePictureInput" accept="image/*" style="display: none;">
+                            </div>
+                            <div class="user-info">
+                                <span class="current-name">Logged in as: <strong id="currentUserName">Loading...</strong></span>
+                                <span class="chat-partner">Chatting with: <strong id="chatPartnerName">Loading...</strong></span>
+                            </div>
+                        </div>
+                        <button class="modal-btn secondary logout-btn" id="logoutBtn">
+                            <span class="btn-icon">🚪</span>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Notifications</h4>
+                    <label class="setting-toggle">
+                        <input type="checkbox" id="soundToggle" checked>
+                        <span class="slider"></span>
+                        <span class="setting-label">Message Sounds</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Login Modal -->
+    <div class="modal show" id="loginModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content login-modal-content">
+            <div class="modal-header">
+                <h3>🔐 Secure Login Required</h3>
+            </div>
+            <div class="modal-body">
+                <div class="login-form">
+                    <div class="input-group">
+                        <label for="usernameInput">Username:</label>
+                        <input type="text" 
+                               id="usernameInput" 
+                               class="login-input" 
+                               placeholder="Enter username..."
+                               autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label for="passwordInput">Password:</label>
+                        <input type="password" 
+                               id="passwordInput" 
+                               class="login-input" 
+                               placeholder="Enter password..."
+                               autocomplete="current-password">
+                    </div>
+                    <div class="login-error" id="loginError" style="display: none;">
+                        Invalid username or password. Please try again.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn primary" id="loginBtn">
+                    <span class="btn-icon">🔑</span>
+                    Login
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-backdrop" id="confirmModalBackdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirm Action</h3>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="confirmCancel">Cancel</button>
+                <button class="modal-btn primary" id="confirmOk">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Voice Recording Modal -->
+    <div class="modal" id="voiceModal">
+        <div class="modal-backdrop" id="voiceModalBackdrop"></div>
+        <div class="modal-content voice-modal-content">
+            <div class="voice-recording">
+                <div class="voice-animation">
+                    <div class="voice-circle"></div>
+                    <div class="voice-pulse"></div>
+                </div>
+                <div class="voice-timer" id="voiceTimer">00:00</div>
+                <div class="voice-controls">
+                    <button class="voice-control-btn cancel" id="voiceCancelBtn">Cancel</button>
+                    <button class="voice-control-btn stop" id="voiceStopBtn">Stop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
