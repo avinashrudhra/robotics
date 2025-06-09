@@ -567,6 +567,84 @@ io.on('connection', (socket) => {
     }
   });
 
+  // WebRTC Call Signaling
+  socket.on('call-user', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      console.log(`📞 ${user.username} is calling with type: ${data.type}`);
+      
+      // Find the target user and send call invitation
+      const targetSocketId = activeSessions.get(data.targetUser);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('incoming-call', {
+          from: user.username,
+          type: data.type, // 'voice' or 'video'
+          signalData: data.signalData
+        });
+      }
+    }
+  });
+
+  socket.on('answer-call', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      console.log(`📞 ${user.username} answered the call`);
+      
+      // Find the caller and send answer
+      const callerSocketId = activeSessions.get(data.to);
+      if (callerSocketId) {
+        io.to(callerSocketId).emit('call-answered', {
+          signalData: data.signalData,
+          from: user.username
+        });
+      }
+    }
+  });
+
+  socket.on('decline-call', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      console.log(`📞 ${user.username} declined the call`);
+      
+      // Find the caller and send decline notification
+      const callerSocketId = activeSessions.get(data.to);
+      if (callerSocketId) {
+        io.to(callerSocketId).emit('call-declined', {
+          from: user.username
+        });
+      }
+    }
+  });
+
+  socket.on('end-call', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      console.log(`📞 ${user.username} ended the call`);
+      
+      // Notify the other user that call ended
+      const otherUserSocket = activeSessions.get(data.to);
+      if (otherUserSocket) {
+        io.to(otherUserSocket).emit('call-ended', {
+          from: user.username
+        });
+      }
+    }
+  });
+
+  socket.on('ice-candidate', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      // Forward ICE candidate to the other user
+      const targetSocketId = activeSessions.get(data.to);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('ice-candidate', {
+          candidate: data.candidate,
+          from: user.username
+        });
+      }
+    }
+  });
+
   // Handle profile picture updates
   socket.on('profile-picture-update', (data) => {
     const user = users.get(socket.id);

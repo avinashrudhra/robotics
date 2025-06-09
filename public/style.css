@@ -2878,3 +2878,442 @@ input[type="checkbox"] {
         padding: 4px;
     }
 }
+
+/* Call Interface Styles */
+
+/* Call Buttons in Header */
+.action-btn .voice-call-icon,
+.action-btn .video-call-icon {
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover .voice-call-icon {
+    transform: rotate(10deg);
+}
+
+.action-btn:hover .video-call-icon {
+    transform: scale(1.1);
+}
+
+/* Incoming Call Modal */
+.call-modal-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 40px 30px;
+    text-align: center;
+    color: white;
+    min-width: 350px;
+    animation: callModalSlideIn 0.4s ease-out;
+}
+
+@keyframes callModalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.call-info {
+    margin-bottom: 30px;
+}
+
+.caller-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    overflow: hidden;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    animation: callRing 2s infinite;
+}
+
+@keyframes callRing {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+}
+
+.caller-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.call-details h3 {
+    margin: 0 0 5px;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.call-details p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+.call-actions {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+}
+
+.call-btn {
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.decline-btn {
+    background: #ff4757;
+    color: white;
+}
+
+.decline-btn:hover {
+    background: #ff3742;
+    transform: scale(1.1);
+}
+
+.accept-btn {
+    background: #2ed573;
+    color: white;
+}
+
+.accept-btn:hover {
+    background: #26d169;
+    transform: scale(1.1);
+}
+
+.call-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.6s ease;
+}
+
+.call-btn:active::before {
+    width: 120px;
+    height: 120px;
+}
+
+/* Active Call Interface */
+.call-interface {
+    background: #1a1a1a;
+    border-radius: 15px;
+    overflow: hidden;
+    width: 90vw;
+    max-width: 800px;
+    height: 80vh;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+    color: white;
+}
+
+.call-backdrop {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.call-header {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(10px);
+}
+
+.call-status h3 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.call-status p {
+    margin: 0;
+    opacity: 0.7;
+    font-size: 14px;
+}
+
+.call-minimize-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.call-minimize-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.call-video-container {
+    flex: 1;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remote-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.local-video {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+    height: 120px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: #333;
+}
+
+.call-controls {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.control-btn {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.control-btn.active {
+    background: #2ed573;
+}
+
+.control-btn.muted {
+    background: #ff4757;
+}
+
+.hang-up-btn {
+    background: #ff4757 !important;
+}
+
+.hang-up-btn:hover {
+    background: #ff3742 !important;
+    transform: scale(1.1) rotate(135deg);
+}
+
+/* Minimized Call Interface */
+.minimized-call {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 25px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    z-index: 999;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: minimizedSlideIn 0.3s ease-out;
+}
+
+@keyframes minimizedSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.minimized-call-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+}
+
+.minimized-call-info span:first-child {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.minimized-call-info span:last-child {
+    opacity: 0.7;
+}
+
+.minimized-call-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.minimized-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.minimized-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.hang-up-minimized {
+    background: #ff4757 !important;
+}
+
+.hang-up-minimized:hover {
+    background: #ff3742 !important;
+}
+
+/* Voice-only Call Styles */
+.call-interface.voice-only .call-video-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.call-interface.voice-only .remote-video,
+.call-interface.voice-only .local-video {
+    display: none;
+}
+
+.voice-call-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    animation: voicePulse 2s infinite;
+}
+
+@keyframes voicePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.voice-call-info {
+    text-align: center;
+    color: white;
+}
+
+.voice-call-info h3 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.voice-call-info p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .call-interface {
+        width: 95vw;
+        height: 85vh;
+    }
+    
+    .local-video {
+        width: 100px;
+        height: 80px;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .call-controls {
+        padding: 15px;
+        gap: 15px;
+    }
+    
+    .control-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+    
+    .minimized-call {
+        top: 70px;
+        right: 10px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .call-modal-content {
+        min-width: 280px;
+        padding: 30px 20px;
+    }
+    
+    .caller-avatar {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .call-actions {
+        gap: 30px;
+    }
+    
+    .call-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}

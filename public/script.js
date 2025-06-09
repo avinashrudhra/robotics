@@ -23,6 +23,26 @@ let inactivityTimer;
 let lastActivityTime = Date.now();
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// WebRTC Call System
+let localStream = null;
+let remoteStream = null;
+let peerConnection = null;
+let isCallActive = false;
+let isCallMinimized = false;
+let callType = null; // 'voice' or 'video'
+let callStartTime = null;
+let callTimer = null;
+let isMuted = false;
+let isCameraOff = false;
+
+// ICE servers configuration
+const iceServers = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
 // DOM elements
 const elements = {
     userStatus: document.getElementById('userStatus'),
@@ -40,12 +60,16 @@ const elements = {
     disappearingToggle: document.getElementById('disappearingToggle'),
     clearChatBtn: document.getElementById('clearChatBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
+    voiceCallBtn: document.getElementById('voiceCallBtn'),
+    videoCallBtn: document.getElementById('videoCallBtn'),
     
     // Modals
     imageModal: document.getElementById('imageModal'),
     settingsModal: document.getElementById('settingsModal'),
     confirmModal: document.getElementById('confirmModal'),
     voiceModal: document.getElementById('voiceModal'),
+    incomingCallModal: document.getElementById('incomingCallModal'),
+    activeCallModal: document.getElementById('activeCallModal'),
     
     // Modal elements
     modalImage: document.getElementById('modalImage'),
@@ -56,7 +80,11 @@ const elements = {
     confirmMessage: document.getElementById('confirmMessage'),
     confirmOk: document.getElementById('confirmOk'),
     confirmCancel: document.getElementById('confirmCancel'),
-    soundToggle: document.getElementById('soundToggle')
+    soundToggle: document.getElementById('soundToggle'),
+    
+    // Call elements
+    minimizedCall: document.getElementById('minimizedCall'),
+    emojiPicker: document.getElementById('emojiPicker')
 };
 
 // Initialize the application
@@ -471,6 +499,8 @@ function setupSocketListeners() {
         const notificationText = `${data.username} ${data.disappearingEnabled ? 'enabled' : 'disabled'} disappearing messages`;
         addSystemMessage(`🔄 ${notificationText}`);
     });
+
+    // Call-related socket events will be set up in initializeCallSystem()
 }
 
 // Setup event listeners for UI elements
@@ -538,6 +568,9 @@ function setupEventListeners() {
     
     // Initialize emoji picker
     initializeEmojiPicker();
+    
+    // Initialize call system
+    initializeCallSystem();
 }
 
 // Setup modal event listeners
@@ -1407,8 +1440,6 @@ function insertEmojiToInput(emoji) {
     }
 }
 
-
-
 function clearAllMessages() {
     if (elements.messagesList) {
         elements.messagesList.innerHTML = '';
@@ -1953,4 +1984,5 @@ window.cancelReply = function() {
     }
 };
 
+// WebRTC Call System
 console.log('🤖 Robotic Chat Client loaded!'); 

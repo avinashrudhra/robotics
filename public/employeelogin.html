@@ -28,6 +28,16 @@
             </div>
             
             <div class="header-actions">
+                <!-- Voice Call -->
+                <button class="action-btn" id="voiceCallBtn" title="Voice Call">
+                    <span class="voice-call-icon">📞</span>
+                </button>
+                
+                <!-- Video Call -->
+                <button class="action-btn" id="videoCallBtn" title="Video Call">
+                    <span class="video-call-icon">📹</span>
+                </button>
+
                 <!-- Theme Toggle -->
                 <button class="action-btn" id="themeToggle" title="Toggle Dark Mode">
                     <span class="theme-icon">🌙</span>
@@ -326,6 +336,76 @@
             <div class="emoji-grid" id="emojiGrid">
                 <!-- Emojis will be populated by JavaScript -->
             </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Modal -->
+    <div class="modal" id="incomingCallModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content call-modal-content">
+            <div class="call-info">
+                <div class="caller-avatar" id="callerAvatar">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlMGUwZTAiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzMiIgcj0iMTIiIGZpbGw9IiM5OTk5OTkiLz4KPHBhdGggZD0iTTIwIDYwYzAtMTEuMDQ2IDguOTU0LTIwIDIwLTIwczIwIDguOTU0IDIwIDIwIiBmaWxsPSIjOTk5OTk5Ii8+Cjwvc3ZnPgo=" alt="Caller">
+                </div>
+                <div class="call-details">
+                    <h3 id="callerName">Unknown</h3>
+                    <p id="callType">Incoming call</p>
+                </div>
+            </div>
+            <div class="call-actions">
+                <button class="call-btn decline-btn" id="declineCallBtn">
+                    <span class="call-icon">📞</span>
+                </button>
+                <button class="call-btn accept-btn" id="acceptCallBtn">
+                    <span class="call-icon">📞</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Call Modal -->
+    <div class="modal" id="activeCallModal">
+        <div class="modal-backdrop call-backdrop"></div>
+        <div class="modal-content call-interface">
+            <div class="call-header">
+                <div class="call-status">
+                    <h3 id="activeCallerName">Chat Partner</h3>
+                    <p id="callDuration">00:00</p>
+                </div>
+                <button class="call-minimize-btn" id="minimizeCallBtn">−</button>
+            </div>
+            
+            <div class="call-video-container" id="callVideoContainer">
+                <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+                <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+            </div>
+            
+            <div class="call-controls">
+                <button class="control-btn" id="muteBtn" title="Mute/Unmute">
+                    <span class="control-icon">🎤</span>
+                </button>
+                <button class="control-btn" id="cameraBtn" title="Camera On/Off">
+                    <span class="control-icon">📹</span>
+                </button>
+                <button class="control-btn hang-up-btn" id="hangUpBtn" title="End Call">
+                    <span class="control-icon">📞</span>
+                </button>
+                <button class="control-btn" id="speakerBtn" title="Speaker">
+                    <span class="control-icon">🔊</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimized Call Interface -->
+    <div class="minimized-call" id="minimizedCall" style="display: none;">
+        <div class="minimized-call-info">
+            <span id="minimizedCallerName">Chat Partner</span>
+            <span id="minimizedCallDuration">00:00</span>
+        </div>
+        <div class="minimized-call-controls">
+            <button class="minimized-btn" id="expandCallBtn" title="Expand Call">⬆</button>
+            <button class="minimized-btn hang-up-minimized" id="hangUpMinimizedBtn" title="End Call">📞</button>
         </div>
     </div>
     
