@@ -366,6 +366,8 @@ body {
     background: #f0f0f0;
     height: 100vh;
     overflow: hidden;
+    /* Support for mobile safe areas and keyboard */
+    padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .chat-container {
@@ -1493,6 +1495,38 @@ input[type="checkbox"] {
     background: #b71c1c;
 }
 
+/* Mobile Keyboard Support */
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+    /* Use CSS custom properties for dynamic viewport */
+    .chat-page {
+        height: 100dvh; /* Dynamic viewport height */
+        min-height: 100svh; /* Small viewport height fallback */
+    }
+    
+    /* Ensure input area stays visible above mobile keyboard */
+    .message-input-container {
+        margin-bottom: 5cm;
+        min-height: 5cm;
+    }
+    
+    .input-area-header {
+        position: relative;
+        z-index: 10;
+    }
+    
+    /* Alternative fallback using viewport height */
+    .chat-container {
+        padding-bottom: max(5cm, 20vh);
+        box-sizing: border-box;
+    }
+    
+    /* Prevent viewport jumping when keyboard appears */
+    .messages-container {
+        height: calc(100vh - 200px);
+        min-height: 300px;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .landing-container {
@@ -1548,6 +1582,8 @@ input[type="checkbox"] {
         padding: 0.8rem 0.8rem;
         flex-wrap: wrap;
         gap: 0.5rem;
+        /* Add extra bottom space for mobile keyboard */
+        padding-bottom: 5cm;
     }
     
     .input-area-header {
@@ -1654,6 +1690,8 @@ input[type="checkbox"] {
     .message-input-container {
         padding: 0.4rem 0.6rem 0.8rem;
         gap: 0.3rem;
+        /* Add extra bottom space for mobile keyboard */
+        padding-bottom: 5cm;
     }
     
     .message-input-wrapper {
