@@ -340,7 +340,8 @@ io.on('connection', (socket) => {
       deleted: false,
       type: 'text',
       disappearing: data.disappearing || false,
-      disappearTime: data.disappearTime || null
+      disappearTime: data.disappearTime || null,
+      replyTo: data.replyTo || null
     };
     
     messages.push(message);
@@ -551,6 +552,21 @@ io.on('connection', (socket) => {
     io.emit('chat-cleared');
   });
   
+  // Handle disappearing message settings sync
+  socket.on('disappearing-settings-update', (data) => {
+    const user = users.get(socket.id);
+    if (user) {
+      console.log(`${user.username} updated disappearing settings:`, data);
+      
+      // Broadcast to all users (including sender to confirm)
+      io.emit('disappearing-settings-sync', {
+        username: user.username,
+        disappearingEnabled: data.disappearingEnabled,
+        disappearingTime: data.disappearingTime
+      });
+    }
+  });
+
   // Handle profile picture updates
   socket.on('profile-picture-update', (data) => {
     const user = users.get(socket.id);

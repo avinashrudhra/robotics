@@ -450,6 +450,27 @@ function setupSocketListeners() {
         alert(`Error: ${data.message}`);
         logout();
     });
+
+    // Handle disappearing settings synchronization
+    socket.on('disappearing-settings-sync', (data) => {
+        console.log('Received disappearing settings sync:', data);
+        
+        // Update local settings
+        disappearingMessagesEnabled = data.disappearingEnabled;
+        disappearingTime = data.disappearingTime;
+        
+        // Update localStorage
+        localStorage.setItem('disappearingMessages', disappearingMessagesEnabled);
+        localStorage.setItem('disappearingTime', disappearingTime);
+        
+        // Update UI elements
+        updateDisappearingToggle();
+        updateDisappearingSettingsUI();
+        
+        // Show notification to user about the change
+        const notificationText = `${data.username} ${data.disappearingEnabled ? 'enabled' : 'disabled'} disappearing messages`;
+        addSystemMessage(`🔄 ${notificationText}`);
+    });
 }
 
 // Setup event listeners for UI elements
@@ -496,7 +517,7 @@ function setupEventListeners() {
     elements.voiceBtn?.addEventListener('click', toggleVoiceRecording);
     
     // Emoji button
-    elements.emojiBtn?.addEventListener('click', insertEmoji);
+    elements.emojiBtn?.addEventListener('click', toggleEmojiPicker);
     
     // Quick logout button
     document.getElementById('logoutQuickBtn')?.addEventListener('click', quickLogout);
@@ -514,6 +535,9 @@ function setupEventListeners() {
     
     // Message context menu (right-click)
     elements.messagesList?.addEventListener('contextmenu', handleMessageContextMenu);
+    
+    // Initialize emoji picker
+    initializeEmojiPicker();
 }
 
 // Setup modal event listeners
@@ -557,6 +581,12 @@ function setupSettingsHandlers() {
             }
             localStorage.setItem('disappearingTime', disappearingTime);
             updateDisappearingToggle();
+            
+            // Broadcast settings change to all users
+            socket.emit('disappearing-settings-update', {
+                disappearingEnabled: disappearingMessagesEnabled,
+                disappearingTime: disappearingTime
+            });
         });
     });
     
@@ -599,7 +629,12 @@ function sendMessage() {
     const messageData = {
         text: formatMessage(text),
         disappearing: disappearingMessagesEnabled,
-        disappearTime: disappearingTime
+        disappearTime: disappearingTime,
+        replyTo: currentReplyTo ? {
+            id: currentReplyTo.id,
+            username: currentReplyTo.username,
+            content: currentReplyTo.content
+        } : null
     };
     
     socket.emit('chat-message', messageData);
@@ -607,6 +642,11 @@ function sendMessage() {
     autoResizeTextarea(elements.messageInput);
     handleInputFocus(false);
     stopTyping();
+    
+    // Clear reply interface after sending
+    if (currentReplyTo) {
+        window.cancelReply();
+    }
 }
 
 // Auto-resize textarea to fit content (max 3 lines)
@@ -869,12 +909,40 @@ function createMessageElement(message) {
     if (message.deleted) {
         content = '<div class="message-deleted">This message was deleted</div>';
     } else {
+        // Add reply block if this message is a reply
+        let replyBlock = '';
+        if (message.replyTo) {
+            replyBlock = `
+                <div class="reply-block" style="
+                    background: rgba(0, 0, 0, 0.05);
+                    border-left: 3px solid #25d366;
+                    margin-bottom: 8px;
+                    padding: 8px 12px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                ">
+                    <div class="reply-username" style="
+                        color: #25d366;
+                        font-weight: 600;
+                        margin-bottom: 2px;
+                    ">${message.replyTo.username}</div>
+                    <div class="reply-content" style="
+                        color: #666;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    ">${message.replyTo.content}</div>
+                </div>
+            `;
+        }
+        
         switch (message.type) {
             case 'text':
-                content = `<div class="message-content">${message.text}</div>`;
+                content = `${replyBlock}<div class="message-content">${message.text}</div>`;
                 break;
             case 'image':
                 content = `
+                    ${replyBlock}
                     <div class="message-content">
                         <img src="${message.imageData}" 
                              alt="${message.imageName}" 
@@ -885,6 +953,7 @@ function createMessageElement(message) {
                 break;
             case 'voice':
                 content = `
+                    ${replyBlock}
                     <div class="message-content">
                         <div class="voice-message">
                             <button class="voice-play-btn" onclick="playVoiceMessage('${message.voiceData}')">
@@ -1117,6 +1186,16 @@ function updateDisappearingToggle() {
     }
 }
 
+function updateDisappearingSettingsUI() {
+    // Update radio buttons in settings modal
+    const radioButtons = document.querySelectorAll('input[name="disappearTime"]');
+    radioButtons.forEach(radio => {
+        if (radio.value == disappearingTime) {
+            radio.checked = true;
+        }
+    });
+}
+
 function toggleDisappearingMessages() {
     disappearingMessagesEnabled = !disappearingMessagesEnabled;
     updateDisappearingToggle();
@@ -1127,6 +1206,12 @@ function toggleDisappearingMessages() {
     
     localStorage.setItem('disappearingMessages', disappearingMessagesEnabled);
     localStorage.setItem('disappearingTime', disappearingTime);
+    
+    // Broadcast settings change to all users
+    socket.emit('disappearing-settings-update', {
+        disappearingEnabled: disappearingMessagesEnabled,
+        disappearingTime: disappearingTime
+    });
 }
 
 function changeBackground(background) {
@@ -1173,19 +1258,152 @@ function changeMessageSize(size) {
     localStorage.setItem('messageSize', size);
 }
 
-function insertEmoji() {
-    const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🔥', '💯', '🎉'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+// Emoji data organized by categories
+const emojiData = {
+    smileys: [
+        '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+        '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
+        '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕',
+        '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'
+    ],
+    people: [
+        '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+        '🖕', '👇', '☝️', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️',
+        '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀',
+        '👁️', '👅', '👄', '💋', '🩸', '👶', '🧒', '👦', '👧', '🧑', '👱', '👨', '🧔', '👩', '🧓', '👴', '👵'
+    ],
+    animals: [
+        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵',
+        '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗',
+        '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖',
+        '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆'
+    ],
+    food: [
+        '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝',
+        '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐',
+        '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭',
+        '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲'
+    ],
+    travel: [
+        '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🏍️', '🛵',
+        '🚲', '🛴', '🛹', '🛼', '🚁', '🛸', '✈️', '🛩️', '🛫', '🛬', '🪂', '💺', '🚀', '🛰️', '🚢', '⛵',
+        '🚤', '🛥️', '🛳️', '⛴️', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✊', '🚍',
+        '🚘', '🚖', '🚡', '🚠', '🚟', '🎠', '🎡', '🎢', '💈', '🎪', '🚩', '🎌', '🏴', '🏳️', '🏁', '🚁'
+    ],
+    objects: [
+        '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+        '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿',
+        '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣',
+        '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭'
+    ],
+    symbols: [
+        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+        '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈',
+        '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳',
+        '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️'
+    ],
+    flags: [
+        '🏁', '🚩', '🎌', '🏴', '🏳️', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️', '🇦🇨', '🇦🇩', '🇦🇪', '🇦🇫', '🇦🇬', '🇦🇮', '🇦🇱', '🇦🇲',
+        '🇦🇴', '🇦🇶', '🇦🇷', '🇦🇸', '🇦🇹', '🇦🇺', '🇦🇼', '🇦🇽', '🇦🇿', '🇧🇦', '🇧🇧', '🇧🇩', '🇧🇪', '🇧🇫', '🇧🇬', '🇧🇭',
+        '🇧🇮', '🇧🇯', '🇧🇱', '🇧🇲', '🇧🇳', '🇧🇴', '🇧🇶', '🇧🇷', '🇧🇸', '🇧🇹', '🇧🇻', '🇧🇼', '🇧🇾', '🇧🇿', '🇨🇦', '🇨🇨',
+        '🇨🇩', '🇨🇫', '🇨🇬', '🇨🇭', '🇨🇮', '🇨🇰', '🇨🇱', '🇨🇲', '🇨🇳', '🇨🇴', '🇨🇵', '🇨🇷', '🇨🇺', '🇨🇻', '🇨🇼', '🇨🇽'
+    ]
+};
+
+let currentEmojiCategory = 'smileys';
+
+function initializeEmojiPicker() {
+    populateEmojiGrid(currentEmojiCategory);
+    setupEmojiTabListeners();
+    setupEmojiClickListeners();
+}
+
+function toggleEmojiPicker() {
+    const emojiPicker = document.getElementById('emojiPicker');
+    if (emojiPicker.classList.contains('show')) {
+        hideEmojiPicker();
+    } else {
+        showEmojiPicker();
+    }
+}
+
+function showEmojiPicker() {
+    const emojiPicker = document.getElementById('emojiPicker');
+    emojiPicker.classList.add('show');
     
+    // Close picker when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', handleEmojiPickerOutsideClick);
+    }, 100);
+}
+
+function hideEmojiPicker() {
+    const emojiPicker = document.getElementById('emojiPicker');
+    emojiPicker.classList.remove('show');
+    document.removeEventListener('click', handleEmojiPickerOutsideClick);
+}
+
+function handleEmojiPickerOutsideClick(event) {
+    const emojiPicker = document.getElementById('emojiPicker');
+    const emojiBtn = elements.emojiBtn;
+    
+    if (!emojiPicker.contains(event.target) && !emojiBtn.contains(event.target)) {
+        hideEmojiPicker();
+    }
+}
+
+function populateEmojiGrid(category) {
+    const emojiGrid = document.getElementById('emojiGrid');
+    const emojis = emojiData[category] || emojiData.smileys;
+    
+    emojiGrid.innerHTML = '';
+    
+    emojis.forEach(emoji => {
+        const button = document.createElement('button');
+        button.className = 'emoji-item';
+        button.textContent = emoji;
+        button.onclick = () => insertEmojiToInput(emoji);
+        emojiGrid.appendChild(button);
+    });
+}
+
+function setupEmojiTabListeners() {
+    document.querySelectorAll('.emoji-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            e.target.classList.add('active');
+            
+            // Update current category and populate grid
+            currentEmojiCategory = e.target.dataset.category;
+            populateEmojiGrid(currentEmojiCategory);
+        });
+    });
+}
+
+function setupEmojiClickListeners() {
+    // This is handled by the onclick in populateEmojiGrid
+}
+
+function insertEmojiToInput(emoji) {
     if (elements.messageInput) {
         const input = elements.messageInput;
         const cursorPos = input.selectionStart;
         const textBefore = input.value.substring(0, cursorPos);
         const textAfter = input.value.substring(cursorPos);
         
-        input.value = textBefore + randomEmoji + textAfter;
+        input.value = textBefore + emoji + textAfter;
         input.focus();
-        input.setSelectionRange(cursorPos + randomEmoji.length, cursorPos + randomEmoji.length);
+        input.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+        
+        // Auto-resize textarea and handle focus
+        autoResizeTextarea(input);
+        handleInputFocus(true);
+        
+        // Hide emoji picker after selection
+        hideEmojiPicker();
     }
 }
 
@@ -1235,13 +1453,14 @@ function handleMessageContextMenu(event) {
     event.preventDefault();
     
     const messageElement = event.target.closest('.message');
-    if (!messageElement || !messageElement.classList.contains('sent')) return;
+    if (!messageElement) return;
     
     const messageId = messageElement.dataset.messageId;
-    showMessageContextMenu(event.clientX, event.clientY, messageId);
+    const isOwnMessage = messageElement.classList.contains('sent');
+    showMessageContextMenu(event.clientX, event.clientY, messageId, isOwnMessage);
 }
 
-function showMessageContextMenu(x, y, messageId) {
+function showMessageContextMenu(x, y, messageId, isOwnMessage = false) {
     const existingMenu = document.querySelector('.context-menu');
     if (existingMenu) existingMenu.remove();
     
@@ -1259,14 +1478,24 @@ function showMessageContextMenu(x, y, messageId) {
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
     
-    menu.innerHTML = `
-        <div class="context-menu-item" onclick="editMessage('${messageId}')" style="padding: 0.7rem 1rem; cursor: pointer;">
-            <span>✏️ Edit</span>
-        </div>
-        <div class="context-menu-item" onclick="deleteMessage('${messageId}')" style="padding: 0.7rem 1rem; cursor: pointer;">
-            <span>🗑️ Delete</span>
+    let menuItems = `
+        <div class="context-menu-item" onclick="replyToMessage('${messageId}')" style="padding: 0.7rem 1rem; cursor: pointer;">
+            <span>↩️ Reply</span>
         </div>
     `;
+    
+    if (isOwnMessage) {
+        menuItems += `
+            <div class="context-menu-item" onclick="editMessage('${messageId}')" style="padding: 0.7rem 1rem; cursor: pointer;">
+                <span>✏️ Edit</span>
+            </div>
+            <div class="context-menu-item" onclick="deleteMessage('${messageId}')" style="padding: 0.7rem 1rem; cursor: pointer;">
+                <span>🗑️ Delete</span>
+            </div>
+        `;
+    }
+    
+    menu.innerHTML = menuItems;
     
     document.body.appendChild(menu);
     
@@ -1398,6 +1627,30 @@ window.deleteMessage = function(messageId) {
     if (confirm('Are you sure you want to delete this message?')) {
         socket.emit('delete-message', messageId);
     }
+};
+
+window.replyToMessage = function(messageId) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageElement) return;
+    
+    // Find the message data from our messages array or determine username from message type
+    const messageContent = messageElement.querySelector('.message-content')?.textContent || '';
+    const messageTime = messageElement.querySelector('.message-time')?.textContent || '';
+    
+    // Determine username based on message alignment
+    let messageUser;
+    if (messageElement.classList.contains('sent')) {
+        messageUser = currentUser; // Current user's message
+    } else {
+        messageUser = chatPartner; // Partner's message
+    }
+    
+    // Close context menu
+    const existingMenu = document.querySelector('.context-menu');
+    if (existingMenu) existingMenu.remove();
+    
+    // Show reply interface
+    showReplyInterface(messageId, messageUser, messageContent, messageTime);
 };
 
 function downloadImage() {
@@ -1629,5 +1882,75 @@ function quickLogout() {
     // Immediate logout without confirmation
     logout();
 }
+
+// Reply functionality
+let currentReplyTo = null;
+
+function showReplyInterface(messageId, username, content, time) {
+    currentReplyTo = {
+        id: messageId,
+        username: username,
+        content: content.substring(0, 100) + (content.length > 100 ? '...' : ''), // Truncate long messages
+        time: time
+    };
+    
+    // Create or update reply preview
+    let replyPreview = document.getElementById('replyPreview');
+    if (!replyPreview) {
+        replyPreview = document.createElement('div');
+        replyPreview.id = 'replyPreview';
+        replyPreview.style.cssText = `
+            position: fixed;
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        `;
+        
+        document.body.appendChild(replyPreview);
+    }
+    
+    replyPreview.innerHTML = `
+        <div style="flex: 1; padding-right: 12px;">
+            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                <span style="color: #25d366; font-weight: 600; font-size: 14px;">↩️ Replying to ${username}</span>
+            </div>
+            <div style="color: #666; font-size: 13px; line-height: 1.3;">${content}</div>
+        </div>
+        <button onclick="cancelReply()" style="
+            background: none; 
+            border: none; 
+            color: #999; 
+            font-size: 18px; 
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">×</button>
+    `;
+    
+    // Focus on input
+    elements.messageInput?.focus();
+}
+
+window.cancelReply = function() {
+    currentReplyTo = null;
+    const replyPreview = document.getElementById('replyPreview');
+    if (replyPreview) {
+        replyPreview.remove();
+    }
+};
 
 console.log('🤖 Robotic Chat Client loaded!'); 

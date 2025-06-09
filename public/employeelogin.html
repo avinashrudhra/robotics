@@ -307,6 +307,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emojiPicker">
+        <div class="emoji-header">
+            <div class="emoji-tabs">
+                <button class="emoji-tab active" data-category="smileys">😀</button>
+                <button class="emoji-tab" data-category="people">👋</button>
+                <button class="emoji-tab" data-category="animals">🐶</button>
+                <button class="emoji-tab" data-category="food">🍎</button>
+                <button class="emoji-tab" data-category="travel">🚗</button>
+                <button class="emoji-tab" data-category="objects">⚽</button>
+                <button class="emoji-tab" data-category="symbols">❤️</button>
+                <button class="emoji-tab" data-category="flags">🏁</button>
+            </div>
+        </div>
+        <div class="emoji-content">
+            <div class="emoji-grid" id="emojiGrid">
+                <!-- Emojis will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
