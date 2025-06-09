@@ -16,6 +16,7 @@ let disappearingTime = 0;
 let soundEnabled = true;
 let isDarkMode = false;
 let currentBackground = 'default';
+let currentMessageSize = 'medium';
 
 // Inactivity logout variables
 let inactivityTimer;
@@ -384,6 +385,7 @@ function setupEventListeners() {
     elements.messageInput.addEventListener('input', (e) => {
         handleTyping();
         autoResizeTextarea(e.target);
+        handleInputFocus(true);
     });
     elements.messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -391,9 +393,21 @@ function setupEventListeners() {
             sendMessage();
         }
     });
+    elements.messageInput.addEventListener('focus', () => {
+        handleInputFocus(true);
+    });
+    elements.messageInput.addEventListener('blur', () => {
+        // Delay to check if input is empty
+        setTimeout(() => {
+            if (!elements.messageInput.value.trim()) {
+                handleInputFocus(false);
+            }
+        }, 200);
+    });
     
-    // Initialize textarea height
+    // Initialize textarea height and collapsed state
     autoResizeTextarea(elements.messageInput);
+    handleInputFocus(false);
     
     // Send button
     elements.sendBtn?.addEventListener('click', sendMessage);
@@ -468,6 +482,13 @@ function setupSettingsHandlers() {
         });
     });
     
+    // Message size options
+    document.querySelectorAll('.size-option').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            changeMessageSize(e.target.dataset.size);
+        });
+    });
+    
     // Sound toggle
     document.getElementById('soundToggle')?.addEventListener('change', (e) => {
         soundEnabled = e.target.checked;
@@ -499,6 +520,7 @@ function sendMessage() {
     socket.emit('chat-message', messageData);
     elements.messageInput.value = '';
     autoResizeTextarea(elements.messageInput);
+    handleInputFocus(false);
     stopTyping();
 }
 
@@ -524,6 +546,20 @@ function autoResizeTextarea(textarea) {
         textarea.style.overflowY = 'auto';
     } else {
         textarea.style.overflowY = 'hidden';
+    }
+}
+
+// Handle input focus states for collapsed/expanded behavior
+function handleInputFocus(isFocused) {
+    const wrapper = elements.messageInput?.parentElement;
+    if (!wrapper) return;
+    
+    if (isFocused || elements.messageInput.value.trim()) {
+        wrapper.classList.remove('collapsed');
+        wrapper.classList.add('focused');
+    } else {
+        wrapper.classList.remove('focused');
+        wrapper.classList.add('collapsed');
     }
 }
 
@@ -943,6 +979,9 @@ function loadSettings() {
     
     currentBackground = localStorage.getItem('chatBackground') || 'default';
     changeBackground(currentBackground);
+    
+    currentMessageSize = localStorage.getItem('messageSize') || 'medium';
+    changeMessageSize(currentMessageSize);
 }
 
 function toggleDarkMode() {
@@ -992,6 +1031,33 @@ function changeBackground(background) {
     localStorage.setItem('chatBackground', background);
 }
 
+function changeMessageSize(size) {
+    currentMessageSize = size;
+    
+    // Remove active class from all size options
+    document.querySelectorAll('.size-option').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Add active class to selected option
+    const selectedBtn = document.querySelector(`[data-size="${size}"]`);
+    if (selectedBtn) {
+        selectedBtn.classList.add('active');
+    }
+    
+    // Apply size class to chat container
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+        // Remove existing size classes
+        chatContainer.className = chatContainer.className.replace(/\bmessage-size-\w+/g, '');
+        // Add new size class
+        chatContainer.classList.add(`message-size-${size}`);
+    }
+    
+    // Save preference
+    localStorage.setItem('messageSize', size);
+}
+
 function insertEmoji() {
     const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🔥', '💯', '🎉'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
@@ -1039,6 +1105,9 @@ function openSettingsModal() {
     
     const currentBg = document.querySelector(`[data-bg="${currentBackground}"]`);
     if (currentBg) currentBg.classList.add('active');
+    
+    const currentSize = document.querySelector(`[data-size="${currentMessageSize}"]`);
+    if (currentSize) currentSize.classList.add('active');
     
     const soundToggle = document.getElementById('soundToggle');
     if (soundToggle) soundToggle.checked = soundEnabled;
