@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robotic Chat - Secure Communication</title>
+    <title>Employee Login - Robotic Electronics Training Institute</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
                     <img id="chatPartnerPicture" class="header-profile-picture" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNlMGUwZTAiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIxNiIgcj0iNiIgZmlsbD0iIzk5OTk5OSIvPgo8cGF0aCBkPSJNMTAgMzBjMC01LjUyMyA0LjQ3Ny0xMCAxMC0xMHMxMCA0LjQ3NyAxMCAxMCIgZmlsbD0iIzk5OTk5OSIvPgo8L3N2Zz4K" alt="Chat Partner">
                 </div>
                 <div class="header-details">
-                    <h2 class="chat-title">Robotic Chat</h2>
+                    <h2 class="chat-title">Employee Portal</h2>
                     <div class="user-status" id="userStatus">
                         <span class="status-indicator"></span>
                         <span class="status-text">Connecting...</span>
@@ -66,10 +66,7 @@
         <div class="messages-container" id="messagesContainer">
             <div class="chat-background"></div>
             <div class="messages-list" id="messagesList">
-                <!-- Welcome Message -->
-                <div class="system-message">
-                    <span>🔒 End-to-end encrypted chat</span>
-                </div>
+                <!-- Messages will appear here -->
             </div>
         </div>
         
@@ -168,6 +165,18 @@
                         <label>
                             <input type="radio" name="disappearTime" value="60">
                             <span>1 minute</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="read_5">
+                            <span>👁️ After read + 5s</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="read_30">
+                            <span>👁️ After read + 30s</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="disappearTime" value="read_60">
+                            <span>👁️ After read + 1m</span>
                         </label>
                     </div>
                 </div>

@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupLogin();
     setupEventListeners();
     loadSettings();
-    setupInactivityTracking();
 });
 
 // Setup login modal
@@ -172,8 +171,6 @@ function setupLogin() {
                 setTimeout(() => {
                     loginModal.classList.remove('show');
                     initializeChat();
-                    // Start inactivity timer after successful login
-                    startInactivityTimer();
                 }, 300);
                 
             } else {
@@ -245,32 +242,56 @@ function setupSocketListeners() {
                 
                 // Handle client-side disappearing message display
                 if (message.disappearing && message.disappearTime) {
-                    const messageAge = (Date.now() - new Date(message.timestamp).getTime()) / 1000;
-                    const remainingTime = message.disappearTime - messageAge;
-                    
-                    if (remainingTime > 0) {
-                        // Add visual indicator for disappearing message
-                        const messageElement = document.querySelector(`[data-message-id="${message.id}"]`);
-                        if (messageElement) {
-                            messageElement.classList.add('disappearing-message');
-                            
-                            // Add countdown timer display
-                            const timerElement = document.createElement('div');
-                            timerElement.className = 'disappearing-timer';
-                            timerElement.textContent = `🕐 ${Math.ceil(remainingTime)}s`;
-                            messageElement.querySelector('.message-meta').appendChild(timerElement);
-                            
-                            // Update countdown every second
-                            const countdown = setInterval(() => {
-                                const newRemainingTime = message.disappearTime - ((Date.now() - new Date(message.timestamp).getTime()) / 1000);
-                                if (newRemainingTime <= 0) {
-                                    clearInterval(countdown);
-                                    timerElement.textContent = '🕐 0s';
+                    const messageElement = document.querySelector(`[data-message-id="${message.id}"]`);
+                    if (messageElement) {
+                        messageElement.classList.add('disappearing-message');
+                        
+                        const timerElement = document.createElement('div');
+                        timerElement.className = 'disappearing-timer';
+                        
+                        if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+                            const timeAfterRead = parseInt(message.disappearTime.split('_')[1]);
+                            if (message.read && message.readAt) {
+                                const timeSinceRead = (Date.now() - new Date(message.readAt).getTime()) / 1000;
+                                const remainingTime = timeAfterRead - timeSinceRead;
+                                if (remainingTime > 0) {
+                                    timerElement.textContent = `👁️ ${Math.ceil(remainingTime)}s left`;
+                                    
+                                    const countdown = setInterval(() => {
+                                        const newRemainingTime = timeAfterRead - ((Date.now() - new Date(message.readAt).getTime()) / 1000);
+                                        if (newRemainingTime <= 0) {
+                                            clearInterval(countdown);
+                                            timerElement.textContent = '👁️ 0s';
+                                        } else {
+                                            timerElement.textContent = `👁️ ${Math.ceil(newRemainingTime)}s left`;
+                                        }
+                                    }, 1000);
                                 } else {
-                                    timerElement.textContent = `🕐 ${Math.ceil(newRemainingTime)}s`;
+                                    timerElement.textContent = '👁️ Expired';
                                 }
-                            }, 1000);
+                            } else {
+                                timerElement.textContent = `👁️ After read + ${timeAfterRead}s`;
+                            }
+                        } else {
+                            const messageAge = (Date.now() - new Date(message.timestamp).getTime()) / 1000;
+                            const remainingTime = message.disappearTime - messageAge;
+                            
+                            if (remainingTime > 0) {
+                                timerElement.textContent = `🕐 ${Math.ceil(remainingTime)}s`;
+                                
+                                const countdown = setInterval(() => {
+                                    const newRemainingTime = message.disappearTime - ((Date.now() - new Date(message.timestamp).getTime()) / 1000);
+                                    if (newRemainingTime <= 0) {
+                                        clearInterval(countdown);
+                                        timerElement.textContent = '🕐 0s';
+                                    } else {
+                                        timerElement.textContent = `🕐 ${Math.ceil(newRemainingTime)}s`;
+                                    }
+                                }, 1000);
+                            }
                         }
+                        
+                        messageElement.querySelector('.message-meta').appendChild(timerElement);
                     }
                 }
             }
@@ -288,27 +309,35 @@ function setupSocketListeners() {
             if (messageElement) {
                 messageElement.classList.add('disappearing-message');
                 
-                // Add countdown timer display
+                // Add timer display
                 const timerElement = document.createElement('div');
                 timerElement.className = 'disappearing-timer';
-                timerElement.textContent = `🕐 ${message.disappearTime}s`;
-                messageElement.querySelector('.message-meta').appendChild(timerElement);
                 
-                // Update countdown every second
-                let remainingTime = message.disappearTime;
-                const countdown = setInterval(() => {
-                    remainingTime--;
-                    if (remainingTime <= 0) {
-                        clearInterval(countdown);
-                        timerElement.textContent = '🕐 0s';
-                    } else {
-                        timerElement.textContent = `🕐 ${remainingTime}s`;
-                    }
-                }, 1000);
+                if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+                    const timeAfterRead = parseInt(message.disappearTime.split('_')[1]);
+                    timerElement.textContent = `👁️ After read + ${timeAfterRead}s`;
+                } else {
+                    timerElement.textContent = `🕐 ${message.disappearTime}s`;
+                    
+                    // Update countdown every second for regular messages
+                    let remainingTime = message.disappearTime;
+                    const countdown = setInterval(() => {
+                        remainingTime--;
+                        if (remainingTime <= 0) {
+                            clearInterval(countdown);
+                            timerElement.textContent = '🕐 0s';
+                        } else {
+                            timerElement.textContent = `🕐 ${remainingTime}s`;
+                        }
+                    }, 1000);
+                }
+                
+                messageElement.querySelector('.message-meta').appendChild(timerElement);
             }
         }
         
-        if (message.userId !== socket.id) {
+        // Only mark messages as read if they're not from current user
+        if (message.username !== currentUser) {
             // Mark message as read after a short delay
             setTimeout(() => {
                 socket.emit('messages-read', [message.id]);
@@ -360,7 +389,6 @@ function setupSocketListeners() {
     // Chat cleared
     socket.on('chat-cleared', () => {
         clearAllMessages();
-        addSystemMessage('Chat has been cleared');
     });
     
     // User list updates
@@ -374,6 +402,20 @@ function setupSocketListeners() {
         // Save to localStorage and update display
         localStorage.setItem(`profilePicture_${data.username}`, data.profilePicture);
         updateProfilePicture(data.username, data.profilePicture);
+    });
+
+    // Handle force logout
+    socket.on('force-logout', (data) => {
+        console.log('Force logout received:', data.reason);
+        alert(`You have been logged out: ${data.reason}`);
+        logout();
+    });
+
+    // Handle server errors
+    socket.on('error', (data) => {
+        console.log('Server error received:', data.message);
+        alert(`Error: ${data.message}`);
+        logout();
     });
 }
 
@@ -429,7 +471,9 @@ function setupEventListeners() {
     // Header actions
     elements.themeToggle?.addEventListener('click', toggleDarkMode);
     elements.disappearingToggle?.addEventListener('click', toggleDisappearingMessages);
-    elements.clearChatBtn?.addEventListener('click', showClearChatConfirmation);
+    elements.clearChatBtn?.addEventListener('click', () => {
+        socket.emit('clear-chat');
+    });
     elements.settingsBtn?.addEventListener('click', openSettingsModal);
     
     // Modal event listeners
@@ -468,8 +512,16 @@ function setupSettingsHandlers() {
     // Disappearing messages
     document.querySelectorAll('input[name="disappearTime"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-            disappearingTime = parseInt(e.target.value);
-            disappearingMessagesEnabled = disappearingTime > 0;
+            const value = e.target.value;
+            if (value.startsWith('read_')) {
+                // Handle "after read + time" format
+                disappearingTime = value;
+                disappearingMessagesEnabled = true;
+            } else {
+                // Handle regular time format
+                disappearingTime = parseInt(value);
+                disappearingMessagesEnabled = disappearingTime > 0;
+            }
             localStorage.setItem('disappearingTime', disappearingTime);
             updateDisappearingToggle();
         });
@@ -754,7 +806,9 @@ function displayMessage(message) {
 // Create message element
 function createMessageElement(message) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.userId === socket.id ? 'sent' : 'received'}`;
+    // Check if message is from current user based on username, not socket ID
+    const isOwnMessage = message.username === currentUser;
+    messageDiv.className = `message ${isOwnMessage ? 'sent' : 'received'}`;
     messageDiv.dataset.messageId = message.id;
     
     // Add profile indicator
@@ -823,7 +877,7 @@ function createMessageElement(message) {
     });
     
     let statusIcon = '';
-    if (message.userId === socket.id && !message.deleted) {
+    if (isOwnMessage && !message.deleted) {
         if (message.read) {
             statusIcon = '<span class="message-status read"><span style="color: #53bdeb;">✓✓</span></span>';
         } else if (message.delivered) {
@@ -881,12 +935,27 @@ function updateOnlineStatus(users) {
 
 function scrollToBottom() {
     setTimeout(() => {
-        if (elements.messagesContainer) {
-            elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
+        // Try multiple elements to ensure scroll works
+        const messagesList = document.getElementById('messagesList');
+        const messagesContainer = elements.messagesContainer;
+        
+        if (messagesList) {
+            messagesList.scrollTop = messagesList.scrollHeight + 500;
         }
+        
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight + 500;
+        }
+        
+        // Also try scrolling the last message into view
+        const lastMessage = document.querySelector('.message:last-child');
+        if (lastMessage) {
+            lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        
         // Mark all visible messages as read
         markVisibleMessagesAsRead();
-    }, 100);
+    }, 150);
 }
 
 // Mark visible messages as read
@@ -974,8 +1043,21 @@ function loadSettings() {
     if (soundToggle) soundToggle.checked = soundEnabled;
     
     disappearingMessagesEnabled = localStorage.getItem('disappearingMessages') === 'true';
-    disappearingTime = parseInt(localStorage.getItem('disappearingTime')) || 0;
+    const savedTime = localStorage.getItem('disappearingTime');
+    if (savedTime && savedTime.startsWith('read_')) {
+        disappearingTime = savedTime;
+        disappearingMessagesEnabled = true;
+    } else {
+        disappearingTime = parseInt(savedTime) || 0;
+        disappearingMessagesEnabled = disappearingTime > 0;
+    }
     updateDisappearingToggle();
+    
+    // Set the correct radio button
+    const radioButton = document.querySelector(`input[name="disappearTime"][value="${disappearingTime}"]`);
+    if (radioButton) {
+        radioButton.checked = true;
+    }
     
     currentBackground = localStorage.getItem('chatBackground') || 'default';
     changeBackground(currentBackground);
@@ -1074,29 +1156,12 @@ function insertEmoji() {
     }
 }
 
-function showClearChatConfirmation() {
-    const confirmMessage = document.getElementById('confirmMessage');
-    const confirmOk = document.getElementById('confirmOk');
-    
-    if (confirmMessage) {
-        confirmMessage.textContent = 'Are you sure you want to clear the entire chat? This action cannot be undone and will clear the chat for all users.';
-    }
-    
-    if (confirmOk) {
-        confirmOk.onclick = () => {
-            socket.emit('clear-chat');
-            closeModal('confirmModal');
-        };
-    }
-    
-    openModal('confirmModal');
-}
+
 
 function clearAllMessages() {
     if (elements.messagesList) {
         elements.messagesList.innerHTML = '';
     }
-    addSystemMessage('🔒 End-to-end encrypted chat');
 }
 
 function openSettingsModal() {
@@ -1484,8 +1549,8 @@ function startInactivityTimer() {
 function updateSessionStatus() {
     const statusText = document.querySelector('.status-text');
     if (statusText && currentUser) {
-        statusText.textContent = 'Online • Auto-logout: 5min';
-        statusText.title = 'Will automatically logout after 5 minutes of inactivity';
+        statusText.textContent = 'Online';
+        statusText.title = 'Currently online';
     }
 }
 
@@ -1498,18 +1563,10 @@ function stopInactivityTimer() {
     console.log('Inactivity timer stopped');
 }
 
-// Auto logout due to inactivity
+// Auto logout due to inactivity (disabled)
 function autoLogout() {
-    console.log('Auto-logout triggered due to 5 minutes of inactivity');
-    
-    // Show notification
-    alert('You have been automatically logged out due to 5 minutes of inactivity.');
-    
-    // Stop the timer
-    stopInactivityTimer();
-    
-    // Perform logout
-    logout();
+    // Auto-logout functionality disabled
+    console.log('Auto-logout disabled - users stay logged in');
 }
 
 function logout() {

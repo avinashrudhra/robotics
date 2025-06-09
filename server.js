@@ -25,6 +25,7 @@ app.use(express.static('public'));
 // In-memory storage for messages and users
 let messages = [];
 let users = new Map();
+let activeSessions = new Map(); // Track active sessions per username (username -> socketId)
 let disappearingMessages = new Map(); // Store disappearing message timers
 let loginAttempts = new Map(); // Track login attempts for rate limiting
 
@@ -71,7 +72,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/chat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+  res.sendFile(path.join(__dirname, 'public', 'employeelogin.html'));
+});
+
+app.get('/employeelogin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'employeelogin.html'));
 });
 
 // Rate limiting helper function
@@ -145,6 +150,21 @@ app.post('/login', async (req, res) => {
         recordLoginAttempt(clientIP, true);
         const chatPartner = chatPartners[matchedUsername];
         
+        // Check if user already has an active session
+        if (activeSessions.has(matchedUsername)) {
+          const oldSocketId = activeSessions.get(matchedUsername);
+          const oldSocket = io.sockets.sockets.get(oldSocketId);
+          
+          if (oldSocket) {
+            console.log(`🔄 Disconnecting old session for ${matchedUsername} (${oldSocketId})`);
+            oldSocket.emit('force-logout', { reason: 'New login from another location' });
+            oldSocket.disconnect(true);
+          }
+          
+          // Clean up old session data
+          users.delete(oldSocketId);
+        }
+        
         console.log(`✅ Successful login: ${matchedUsername} from IP: ${clientIP}`);
         
         res.json({ 
@@ -208,6 +228,38 @@ io.on('connection', (socket) => {
     const username = userData.username || `User_${socket.id.substring(0, 6)}`;
     const chatPartner = userData.chatPartner || null;
     
+    // Check if this is a valid user
+    if (!validUsers[username]) {
+      socket.emit('error', { message: 'Invalid user' });
+      socket.disconnect(true);
+      return;
+    }
+    
+    // Check user limit (max 2 users: Manu and Pavi)
+    if (activeSessions.size >= 2 && !activeSessions.has(username)) {
+      socket.emit('error', { message: 'Chat room is full. Maximum 2 users allowed.' });
+      socket.disconnect(true);
+      return;
+    }
+    
+    // Check if user already has an active session (double check)
+    if (activeSessions.has(username) && activeSessions.get(username) !== socket.id) {
+      const oldSocketId = activeSessions.get(username);
+      const oldSocket = io.sockets.sockets.get(oldSocketId);
+      
+      if (oldSocket) {
+        console.log(`🔄 Force disconnecting old session for ${username} (${oldSocketId})`);
+        oldSocket.emit('force-logout', { reason: 'New login from another location' });
+        oldSocket.disconnect(true);
+      }
+      
+      // Clean up old session data
+      users.delete(oldSocketId);
+    }
+    
+    // Register new active session
+    activeSessions.set(username, socket.id);
+    
     users.set(socket.id, {
       id: socket.id,
       username: username,
@@ -216,35 +268,59 @@ io.on('connection', (socket) => {
       lastSeen: new Date()
     });
     
+    console.log(`✅ ${username} joined the chat (partner: ${chatPartner})`);
+    logActiveSessions();
+    
     // Send existing messages to new user
     socket.emit('load-messages', messages);
     
     // Restart disappearing message timers for existing messages
     messages.forEach(message => {
       if (message.disappearing && message.disappearTime && !message.deleted && !disappearingMessages.has(message.id)) {
-        const messageAge = (Date.now() - new Date(message.timestamp).getTime()) / 1000;
-        const remainingTime = message.disappearTime - messageAge;
-        
-        if (remainingTime > 0) {
-          // Message still has time left
-          const timer = setTimeout(() => {
-            deleteMessage(message.id, true); // true indicates disappearing message
-          }, remainingTime * 1000);
-          
-          disappearingMessages.set(message.id, timer);
-          console.log(`Restarted disappearing timer for message ${message.id}, remaining: ${remainingTime}s`);
+        if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+          // For "after read + time" messages
+          if (message.read && message.readAt) {
+            const timeAfterRead = parseInt(message.disappearTime.split('_')[1]);
+            const timeSinceRead = (Date.now() - new Date(message.readAt).getTime()) / 1000;
+            const remainingTime = timeAfterRead - timeSinceRead;
+            
+            if (remainingTime > 0) {
+              const timer = setTimeout(() => {
+                deleteMessage(message.id, true);
+              }, remainingTime * 1000);
+              
+              disappearingMessages.set(message.id, timer);
+              console.log(`Restarted "after read + time" timer for message ${message.id}, remaining: ${remainingTime}s`);
+            } else {
+              deleteMessage(message.id, true);
+              console.log(`Auto-deleted expired "after read + time" message ${message.id}`);
+            }
+          }
+          // If not read yet, timer will start when marked as read
         } else {
-          // Message should have already disappeared
-          deleteMessage(message.id, true); // true indicates disappearing message
-          console.log(`Auto-deleted expired message ${message.id}`);
+          // Regular time-based disappearing message
+          const messageAge = (Date.now() - new Date(message.timestamp).getTime()) / 1000;
+          const remainingTime = message.disappearTime - messageAge;
+          
+          if (remainingTime > 0) {
+            // Message still has time left
+            const timer = setTimeout(() => {
+              deleteMessage(message.id, true); // true indicates disappearing message
+            }, remainingTime * 1000);
+            
+            disappearingMessages.set(message.id, timer);
+            console.log(`Restarted disappearing timer for message ${message.id}, remaining: ${remainingTime}s`);
+          } else {
+            // Message should have already disappeared
+            deleteMessage(message.id, true); // true indicates disappearing message
+            console.log(`Auto-deleted expired message ${message.id}`);
+          }
         }
       }
     });
     
     // Broadcast user list update
     broadcastUserList();
-    
-    console.log(`${username} joined the chat (partner: ${chatPartner})`);
   });
   
   // Handle chat messages
@@ -274,11 +350,18 @@ io.on('connection', (socket) => {
     
     // Handle disappearing messages
     if (message.disappearing && message.disappearTime) {
-      const timer = setTimeout(() => {
-        deleteMessage(message.id, true); // true indicates disappearing message
-      }, message.disappearTime * 1000);
-      
-      disappearingMessages.set(message.id, timer);
+      if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+        // Don't start timer immediately for "after read + time" messages
+        // Timer will start when message is marked as read
+        console.log(`Message ${message.id} set to disappear after being read + ${message.disappearTime.split('_')[1]}s`);
+      } else {
+        // Regular time-based disappearing message
+        const timer = setTimeout(() => {
+          deleteMessage(message.id, true); // true indicates disappearing message
+        }, message.disappearTime * 1000);
+        
+        disappearingMessages.set(message.id, timer);
+      }
     }
     
     // Mark as delivered after a short delay
@@ -314,11 +397,15 @@ io.on('connection', (socket) => {
     
     // Handle disappearing images
     if (message.disappearing && message.disappearTime) {
-      const timer = setTimeout(() => {
-        deleteMessage(message.id, true); // true indicates disappearing message
-      }, message.disappearTime * 1000);
-      
-      disappearingMessages.set(message.id, timer);
+      if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+        console.log(`Image ${message.id} set to disappear after being read + ${message.disappearTime.split('_')[1]}s`);
+      } else {
+        const timer = setTimeout(() => {
+          deleteMessage(message.id, true); // true indicates disappearing message
+        }, message.disappearTime * 1000);
+        
+        disappearingMessages.set(message.id, timer);
+      }
     }
     
     setTimeout(() => {
@@ -352,11 +439,15 @@ io.on('connection', (socket) => {
     io.emit('message-received', message);
     
     if (message.disappearing && message.disappearTime) {
-      const timer = setTimeout(() => {
-        deleteMessage(message.id, true); // true indicates disappearing message
-      }, message.disappearTime * 1000);
-      
-      disappearingMessages.set(message.id, timer);
+      if (typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+        console.log(`Voice message ${message.id} set to disappear after being read + ${message.disappearTime.split('_')[1]}s`);
+      } else {
+        const timer = setTimeout(() => {
+          deleteMessage(message.id, true); // true indicates disappearing message
+        }, message.disappearTime * 1000);
+        
+        disappearingMessages.set(message.id, timer);
+      }
     }
     
     setTimeout(() => {
@@ -391,7 +482,27 @@ io.on('connection', (socket) => {
       const message = messages.find(m => m.id === id);
       if (message && message.userId !== socket.id) {
         message.read = true;
+        message.readAt = new Date();
         console.log(`Message ${id} marked as read by ${user.username}`);
+        
+        // Handle "after read + time" disappearing messages
+        if (message.disappearing && typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
+          const timeAfterRead = parseInt(message.disappearTime.split('_')[1]);
+          
+          // Clear existing timer if any
+          if (disappearingMessages.has(id)) {
+            clearTimeout(disappearingMessages.get(id));
+          }
+          
+          // Start new timer from read time
+          const timer = setTimeout(() => {
+            deleteMessage(id, true); // true indicates disappearing message
+            console.log(`Message ${id} disappeared after being read + ${timeAfterRead}s`);
+          }, timeAfterRead * 1000);
+          
+          disappearingMessages.set(id, timer);
+          console.log(`Started "after read + ${timeAfterRead}s" timer for message ${id}`);
+        }
       }
     });
     
@@ -452,6 +563,14 @@ io.on('connection', (socket) => {
     const user = users.get(socket.id);
     if (user) {
       console.log(`${user.username} disconnected`);
+      
+      // Remove from active sessions if this is the current session
+      if (activeSessions.get(user.username) === socket.id) {
+        activeSessions.delete(user.username);
+        console.log(`🔄 Removed active session for ${user.username}`);
+        logActiveSessions();
+      }
+      
       users.delete(socket.id);
       broadcastUserList();
     }
@@ -462,6 +581,11 @@ io.on('connection', (socket) => {
 function broadcastUserList() {
   const userList = Array.from(users.values());
   io.emit('user-list-update', userList);
+}
+
+function logActiveSessions() {
+  console.log('🔄 Active Sessions:', Object.fromEntries(activeSessions));
+  console.log('👥 Total Users:', users.size);
 }
 
 function deleteMessage(messageId, isDisappearing = false) {
