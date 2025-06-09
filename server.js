@@ -479,30 +479,37 @@ io.on('connection', (socket) => {
     console.log(`${user.username} marking messages as read:`, messageIds);
     
     messageIds.forEach(id => {
-      const message = messages.find(m => m.id === id);
+      // Convert to number for consistent comparison
+      const messageId = typeof id === 'string' ? parseFloat(id) : id;
+      const message = messages.find(m => m.id == messageId); // Use == for type coercion
       if (message && message.userId !== socket.id) {
         message.read = true;
         message.readAt = new Date();
-        console.log(`Message ${id} marked as read by ${user.username}`);
+        console.log(`Message ${messageId} marked as read by ${user.username}`);
         
         // Handle "after read + time" disappearing messages
         if (message.disappearing && typeof message.disappearTime === 'string' && message.disappearTime.startsWith('read_')) {
           const timeAfterRead = parseInt(message.disappearTime.split('_')[1]);
           
+          console.log(`🔍 Found "after read + time" message: ${messageId}, disappearTime: ${message.disappearTime}, timeAfterRead: ${timeAfterRead}s`);
+          
           // Clear existing timer if any
-          if (disappearingMessages.has(id)) {
-            clearTimeout(disappearingMessages.get(id));
+          if (disappearingMessages.has(messageId)) {
+            clearTimeout(disappearingMessages.get(messageId));
+            console.log(`🧹 Cleared existing timer for message ${messageId}`);
           }
           
           // Start new timer from read time
           const timer = setTimeout(() => {
-            deleteMessage(id, true); // true indicates disappearing message
-            console.log(`Message ${id} disappeared after being read + ${timeAfterRead}s`);
+            deleteMessage(messageId, true); // true indicates disappearing message
+            console.log(`💨 Message ${messageId} disappeared after being read + ${timeAfterRead}s`);
           }, timeAfterRead * 1000);
           
-          disappearingMessages.set(id, timer);
-          console.log(`Started "after read + ${timeAfterRead}s" timer for message ${id}`);
+          disappearingMessages.set(messageId, timer);
+          console.log(`⏰ Started "after read + ${timeAfterRead}s" timer for message ${messageId}`);
         }
+      } else if (!message) {
+        console.log(`⚠️ Message not found for ID: ${messageId}`);
       }
     });
     

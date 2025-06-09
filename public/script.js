@@ -340,8 +340,12 @@ function setupSocketListeners() {
         if (message.username !== currentUser) {
             // Mark message as read after a short delay
             setTimeout(() => {
-                socket.emit('messages-read', [message.id]);
-                console.log('Marking message as read:', message.id);
+                const messageElement = document.querySelector(`[data-message-id="${message.id}"]`);
+                if (messageElement && !messageElement.dataset.isRead) {
+                    socket.emit('messages-read', [message.id]);
+                    messageElement.dataset.isRead = 'true';
+                    console.log('Marking message as read:', message.id);
+                }
             }, 1500);
             
             playNotificationSound('message');
@@ -359,6 +363,35 @@ function setupSocketListeners() {
         console.log('Received read update for messages:', messageIds);
         messageIds.forEach(id => {
             updateMessageStatus(id, 'read');
+            
+            // Start countdown for "after read + time" messages
+            const messageElement = document.querySelector(`[data-message-id="${id}"]`);
+            if (messageElement) {
+                const timerElement = messageElement.querySelector('.disappearing-timer');
+                if (timerElement && timerElement.textContent.includes('After read +')) {
+                    // Extract the time from the timer text
+                    const timeMatch = timerElement.textContent.match(/After read \+ (\d+)s/);
+                    if (timeMatch) {
+                        const timeAfterRead = parseInt(timeMatch[1]);
+                        console.log(`Starting countdown for message ${id}: ${timeAfterRead}s`);
+                        
+                        // Start countdown
+                        let remainingTime = timeAfterRead;
+                        timerElement.textContent = `👁️ ${remainingTime}s left`;
+                        
+                        const countdown = setInterval(() => {
+                            remainingTime--;
+                            if (remainingTime <= 0) {
+                                clearInterval(countdown);
+                                timerElement.textContent = '👁️ 0s';
+                            } else {
+                                timerElement.textContent = `👁️ ${remainingTime}s left`;
+                            }
+                        }, 1000);
+                    }
+                }
+            }
+            
             console.log('Updated message status to read:', id);
         });
     });
@@ -967,11 +1000,11 @@ function markVisibleMessagesAsRead() {
     
     messageElements.forEach(messageElement => {
         const messageId = messageElement.dataset.messageId;
-        const statusElement = messageElement.querySelector('.message-status');
         
-        // Check if message is not already marked as read
-        if (!statusElement || !statusElement.innerHTML.includes('#53bdeb')) {
+        // Check if message is not already marked as read using data attribute
+        if (!messageElement.dataset.isRead) {
             messagesToMarkRead.push(messageId);
+            messageElement.dataset.isRead = 'true';
         }
     });
     
@@ -1254,6 +1287,7 @@ function updateMessageStatus(messageId, status) {
             statusElement.className = `message-status ${status}`;
             if (status === 'read') {
                 statusElement.innerHTML = '<span style="color: #53bdeb;">✓✓</span>';
+                messageElement.dataset.isRead = 'true';
                 console.log('Set blue ticks for message:', messageId);
             } else if (status === 'delivered') {
                 statusElement.textContent = '✓✓';
