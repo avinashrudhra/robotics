@@ -73,9 +73,9 @@
             </div>
         </div>
         
-        <!-- Message Input Area -->
-        <div class="message-input-container">
-            <div class="input-actions">
+        <!-- Input Area Header -->
+        <div class="input-area-header">
+            <div class="input-header-actions">
                 <!-- Attachment Button -->
                 <button class="input-btn" id="attachBtn" title="Attach File">
                     📎
@@ -92,12 +92,23 @@
                 </button>
             </div>
             
+            <!-- Quick Logout Button -->
+            <button class="logout-quick-btn" id="logoutQuickBtn" title="Logout">
+                <span class="logout-icon">🚪</span>
+                <span class="logout-text">Logout</span>
+            </button>
+        </div>
+
+        <!-- Message Input Area -->
+        <div class="message-input-container">
             <div class="message-input-wrapper">
-                <input type="text" 
+                <textarea 
                        id="messageInput" 
                        class="message-input" 
                        placeholder="Type a message..."
-                       autocomplete="off">
+                       autocomplete="off"
+                       rows="1"
+                       maxlength="1000"></textarea>
                 
                 <button class="emoji-btn" id="emojiBtn" title="Emoji">
                     😊
@@ -106,11 +117,6 @@
             
             <button class="send-btn" id="sendBtn" title="Send Message">
                 <span class="send-icon">➤</span>
-            </button>
-            
-            <!-- Quick Logout Button -->
-            <button class="input-btn logout-quick-btn" id="logoutQuickBtn" title="Logout">
-                🚪
             </button>
             
             <!-- Hidden File Input -->

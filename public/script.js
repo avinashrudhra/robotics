@@ -381,13 +381,19 @@ function setupEventListeners() {
     if (!elements.messageInput) return;
     
     // Message input
-    elements.messageInput.addEventListener('input', handleTyping);
+    elements.messageInput.addEventListener('input', (e) => {
+        handleTyping();
+        autoResizeTextarea(e.target);
+    });
     elements.messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
     });
+    
+    // Initialize textarea height
+    autoResizeTextarea(elements.messageInput);
     
     // Send button
     elements.sendBtn?.addEventListener('click', sendMessage);
@@ -492,7 +498,33 @@ function sendMessage() {
     
     socket.emit('chat-message', messageData);
     elements.messageInput.value = '';
+    autoResizeTextarea(elements.messageInput);
     stopTyping();
+}
+
+// Auto-resize textarea to fit content (max 3 lines)
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+    
+    // Reset height to auto to get correct scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Calculate the height needed
+    const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 24;
+    const minHeight = lineHeight; // 1 line
+    const maxHeight = lineHeight * 3; // 3 lines max
+    
+    let newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+    
+    // Set the new height
+    textarea.style.height = newHeight + 'px';
+    
+    // Show scrollbar if content exceeds 3 lines
+    if (textarea.scrollHeight > maxHeight) {
+        textarea.style.overflowY = 'auto';
+    } else {
+        textarea.style.overflowY = 'hidden';
+    }
 }
 
 // Format message text
